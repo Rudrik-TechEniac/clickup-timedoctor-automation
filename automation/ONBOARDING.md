@@ -138,9 +138,15 @@ time they start a new chat. After that, natural language: "start my next ticket"
 
 ## What's still open company-wide
 
-- Mac's Time Doctor automation is written but unverified (see the Mac section below
-  and `TIMEDOCTOR_UIA_FINDINGS.md`) - it needs someone with a real Mac to calibrate
-  and test it, the same way Windows was proven out through live testing.
+- Mac's Time Doctor automation is now calibrated and verified live (2026-09-14, see
+  `TIMEDOCTOR_UIA_FINDINGS.md`'s Mac section) - one real finding for future
+  teammates setting up on a different Mac: plain AppleScript `System Events` clicks
+  are blocked outright by macOS (`kTCCServicePostEvent` denial, not fixable via the
+  normal Accessibility permission toggle), so both action scripts now depend on
+  `cliclick` (`brew install cliclick`) instead. Add that as a Mac prerequisite below.
+  The rest of a new person's calibration (measuring their own window/button/sidebar
+  coordinates) still needs to be redone per-Mac the same way - only the "which
+  click mechanism works at all" finding transfers.
 - If this needs to scale beyond a handful of people, consider actually setting up
   the git repo (step 0) rather than copying folders by hand each time.
 
@@ -161,11 +167,21 @@ the Windows version - **has never been run for real**.
 - **Time Doctor desktop app for Mac**, installed and logged into their own account.
 - **Their own ClickUp Personal API Token** — same as Windows, see the main `.env`
   table above.
+- **`cliclick`** — `brew install cliclick`. Required: plain AppleScript `System
+  Events` clicks/keystrokes are blocked outright on macOS by a TCC service
+  (`kTCCServicePostEvent`) that isn't fixable via the normal Accessibility
+  permission toggle - confirmed by real testing 2026-09-14, see
+  `TIMEDOCTOR_UIA_FINDINGS.md`'s Mac section. Both action scripts shell out to
+  `cliclick` (hardcoded at `/opt/homebrew/bin/cliclick` - update `CLICLICK_PATH` in
+  both `.applescript` files if a different Mac's Homebrew prefix differs, e.g.
+  Intel Macs default to `/usr/local/bin`).
 - **Grant Accessibility permission**: System Settings → Privacy & Security →
   Accessibility. Exactly which process needs this grant is genuinely unconfirmed
   (Terminal, iTerm, or the Node.js binary itself, depending on how it's launched) -
-  if automation silently fails, check/add all of them. See
-  `TIMEDOCTOR_UIA_FINDINGS.md`'s Mac section for why this is uncertain.
+  if automation silently fails, check/add all of them. Note this only covers
+  window move/resize and general Accessibility API calls, NOT the click/keystroke
+  simulation itself (that's what `cliclick` works around) - see
+  `TIMEDOCTOR_UIA_FINDINGS.md`'s Mac section for the full finding.
 - `TD_SCRIPTS_DIR` in `.env` should point at `automation/scripts/mac` (not
   `scripts/windows`).
 

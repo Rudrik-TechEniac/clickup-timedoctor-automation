@@ -14,7 +14,7 @@
 property TD_WIN_X : 100
 property TD_WIN_Y : 100
 property TD_WIN_W : 1060
-property TD_WIN_H : 880
+property TD_WIN_H : 791 -- requesting 880 actually resolves to 791 on this Mac/screen; use the achievable value
 
 on run argv
 	if (count of argv) is 0 then

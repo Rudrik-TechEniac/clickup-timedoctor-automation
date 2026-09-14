@@ -14,33 +14,46 @@
 -- below is a structural placeholder, not a measurement. Running it uncalibrated could
 -- misclick in a real Time Doctor account exactly like the bugs this same design caught
 -- (and fixed) on Windows during real testing. Calibration steps: ../ONBOARDING.md.
-property CALIBRATED : false
+property CALIBRATED : true
 
 property TD_WIN_X : 100
 property TD_WIN_Y : 100
 property TD_WIN_W : 1060
-property TD_WIN_H : 880
+property TD_WIN_H : 791
 
--- Offsets from the window's top-left corner. PLACEHOLDERS - re-measure on a real Mac
--- screenshot (scripts/mac/td-force-geometry-and-screenshot.applescript) the same way
--- the Windows values were measured; macOS window chrome differs from Windows so these
--- will NOT be the same numbers.
-property TD_ADD_TASK_FIELD_X : 450
-property TD_ADD_TASK_FIELD_Y : 232
-property TD_ADD_START_BUTTON_X : 996
-property TD_ADD_START_BUTTON_Y : 232
+-- Measured 2026-09-14 from a real screenshot (td-force-geometry-and-screenshot.applescript)
+-- on this Mac. IMPORTANT: screencapture -R saves at native Retina resolution (2x here -
+-- confirmed: 2120px/1060pt window width, 1582px/791pt height, both exactly 2.0), so pixel
+-- coordinates read off the PNG were divided by 2 to get the point-space coordinates that
+-- System Events "click at" actually needs. Re-derive with the same /2 step if re-measuring.
+property TD_ADD_TASK_FIELD_X : 525
+property TD_ADD_TASK_FIELD_Y : 159
+property TD_ADD_START_BUTTON_X : 1013
+property TD_ADD_START_BUTTON_Y : 159
 
 -- Sidebar project selection by formula - see td-common.ps1's equivalent for the full
--- rationale. PLACEHOLDERS, same caveat as above.
-property TD_SIDEBAR_X : 180
-property TD_SIDEBAR_LAST_ROW_Y : 847
-property TD_SIDEBAR_ROW_HEIGHT : 48
-property TD_SIDEBAR_SCROLL_X : 180
+-- rationale.
+-- Measured 2026-09-14: what first looked like a scrollbar thumb next to the highlighted
+-- "meydan_directory" row turned out to be a selection-accent bar, not a scroll thumb -
+-- confirmed by sending real CGEvent scroll-wheel events (td-scroll.js) at two different
+-- points over the list and diffing before/after screenshots: zero pixel movement in the
+-- sidebar either time. This account's full PROJECTS list is exactly the 10 rows visible
+-- with no scrolling required (TD_SIDEBAR_SCROLL_X/Y are kept as a harmless no-op safety
+-- net in case a future account has a longer list). Row height was derived from the
+-- measured gap between the first (TD, pixel y=838) and last (VMS_Magid, pixel y=1543)
+-- rows divided by 9 gaps, then /2 for Retina points: (1543-838)/9/2 = 39.17pt - this
+-- matches independently spot-measuring meydan_directory's own row directly (615pt).
+property TD_SIDEBAR_X : 300
+property TD_SIDEBAR_LAST_ROW_Y : 772
+property TD_SIDEBAR_ROW_HEIGHT : 39.17
+property TD_SIDEBAR_SCROLL_X : 300
 property TD_SIDEBAR_SCROLL_Y : 500
--- Real project names, in the order Time Doctor's sidebar shows them (alphabetical,
--- "All" pinned first) - lowercase. Replace with the real list for the account this
--- runs under.
-property TD_SIDEBAR_PROJECT_ORDER : {"all", "ai personal", "cp-portal", "eyecentric", "khalil_voice", "pa", "self learning", "sena"}
+-- Real project names, top to bottom as shown in the sidebar, lowercase. Two names were
+-- truncated on screen ("AI Personal Ass...", "Self Learning & ...") - filled in from the
+-- matching ClickUp space/folder names seen in list_clickup_lists; unconfirmed character-
+-- for-character but irrelevant to selecting "meydan_directory" (index 5 of 10, confirmed
+-- exactly matches the independently-measured row position above).
+property TD_SIDEBAR_PROJECT_ORDER : {"td", "all", "ai personal assistant", "cp-portal", "eyecentric", "meydan_directory", "pa", "self learning & r&d", "sena", "vms_magid"}
 
 on assertForeground()
 	tell application "System Events"
@@ -81,8 +94,12 @@ on scrollSidebarToBottom()
 	my assertForeground()
 	set scrollX to TD_WIN_X + TD_SIDEBAR_SCROLL_X
 	set scrollY to TD_WIN_Y + TD_SIDEBAR_SCROLL_Y
-	set myFolder to (container of (path to me)) as text
-	set scriptPath to POSIX path of (myFolder & "td-scroll.js")
+	-- NOTE: "(container of (path to me)) as text" fails with "Can't make ... into type
+	-- text" (-1700) on this macOS version - confirmed by real testing on 2026-09-14.
+	-- Going through POSIX paths and shell dirname avoids the alias/HFS-text coercion.
+	set scriptPosixPath to POSIX path of (path to me)
+	set scriptDirPosix to do shell script "dirname " & quoted form of scriptPosixPath
+	set scriptPath to scriptDirPosix & "/td-scroll.js"
 	-- Large negative magnitude, well beyond any plausible list length, to guarantee
 	-- hitting the bottom regardless of starting scroll position - same principle as
 	-- the Windows -40-notch scroll. Real per-tick magnitude is unconfirmed (see
@@ -91,26 +108,48 @@ on scrollSidebarToBottom()
 	delay 0.5
 end scrollSidebarToBottom
 
+-- NOTE: "tell application System Events to click at {x,y}" and "keystroke ... using
+-- command down" both fail hard with "System Events got an error: osascript is not
+-- allowed assistive access" (-25211) - confirmed by real testing on 2026-09-14, on
+-- BOTH a remote-controlled session AND a genuinely local Terminal, and NOT fixed by
+-- granting/resetting Accessibility or Automation/AppleEvents permissions for Terminal
+-- or Visual Studio Code. The actual TCC log (log show --predicate 'process=="tccd"')
+-- showed the real denied service is kTCCServicePostEvent ("does not allow prompting;
+-- returning denied") - a stricter, non-promptable gate that System Events' "click at"/
+-- "keystroke" hit specifically, distinct from the plain Accessibility checks that DID
+-- succeed for window position/size (those are a different, promptable service).
+-- Window management (forceGeometry, assertForeground's activate) is untouched here
+-- because those calls kept working throughout.
+--
+-- FIX: shell out to `cliclick` (Homebrew, CGEvent-based, like td-scroll.js) instead of
+-- System Events for the actual click/type actions - confirmed working live: a real
+-- click landed a visible text cursor in Time Doctor's Add Task field with no TCC error.
+property CLICLICK_PATH : "/opt/homebrew/bin/cliclick"
+
 on clickAt(offsetX, offsetY)
 	my assertForeground()
-	set targetX to TD_WIN_X + offsetX
-	set targetY to TD_WIN_Y + offsetY
-	tell application "System Events" to click at {targetX, targetY}
+	-- cliclick requires integer coordinates - the sidebar row-height formula produces
+	-- fractional Y values (e.g. 715.32), which fail with "Invalid Y axis coordinate"
+	-- (confirmed by real testing 2026-09-14). Round here so callers can keep passing
+	-- exact formula results.
+	set targetX to round (TD_WIN_X + offsetX)
+	set targetY to round (TD_WIN_Y + offsetY)
+	do shell script CLICLICK_PATH & " c:" & targetX & "," & targetY
 end clickAt
 
-on pasteText(theText)
+on typeText(theText)
 	my assertForeground()
-	set the clipboard to theText
-	delay 0.2
-	my assertForeground()
-	tell application "System Events" to keystroke "v" using command down
-end pasteText
+	do shell script CLICLICK_PATH & " t:" & (quoted form of theText)
+end typeText
 
 on selectSidebarProject(projectName)
-	set key to my toLowerTrim(projectName)
+	-- NOTE: a local variable named "key" collides with a reserved System Events term
+	-- and fails with "Can't set key to ..." (-10006) - confirmed by real testing on
+	-- 2026-09-14. Renamed to projKey.
+	set projKey to my toLowerTrim(projectName)
 	set idx to -1
 	repeat with i from 1 to count of TD_SIDEBAR_PROJECT_ORDER
-		if item i of TD_SIDEBAR_PROJECT_ORDER is key then
+		if item i of TD_SIDEBAR_PROJECT_ORDER is projKey then
 			set idx to i - 1 -- 0-based, matching the Windows implementation's indexing
 			exit repeat
 		end if
@@ -159,7 +198,7 @@ on run argv
 
 	my clickAt(TD_ADD_TASK_FIELD_X, TD_ADD_TASK_FIELD_Y)
 	delay 0.4
-	my pasteText(taskText)
+	my typeText(taskText)
 	delay 0.4
 	my clickAt(TD_ADD_START_BUTTON_X, TD_ADD_START_BUTTON_Y)
 	delay 0.8

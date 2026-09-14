@@ -2,16 +2,18 @@
 -- Same design/caveats as td-add-and-start-task.applescript - see that file's header.
 --
 -- !!! UNCALIBRATED - DO NOT RUN FOR REAL UNTIL CALIBRATED IS SET TO true BELOW !!!
-property CALIBRATED : false
+property CALIBRATED : true
 
 property TD_WIN_X : 100
 property TD_WIN_Y : 100
 property TD_WIN_W : 1060
-property TD_WIN_H : 880
+property TD_WIN_H : 791
 
--- PLACEHOLDER - re-measure on a real Mac screenshot.
-property TD_STOP_BUTTON_X : 996
-property TD_STOP_BUTTON_Y : 137
+-- Measured 2026-09-14 from a real screenshot, same /2 Retina-pixel-to-point conversion
+-- as td-add-and-start-task.applescript - this is the big red Stop button in the top
+-- banner (not a per-row play/stop icon).
+property TD_STOP_BUTTON_X : 1010
+property TD_STOP_BUTTON_Y : 82
 
 on assertForeground()
 	tell application "System Events"
@@ -48,11 +50,16 @@ on forceGeometry()
 	my assertForeground()
 end forceGeometry
 
+-- NOTE: System Events "click at" fails with "osascript is not allowed assistive
+-- access" (-25211 / kTCCServicePostEvent denied) - see td-add-and-start-task.applescript's
+-- header for the full finding. Using cliclick (CGEvent-based) instead, confirmed working.
+property CLICLICK_PATH : "/opt/homebrew/bin/cliclick"
+
 on clickAt(offsetX, offsetY)
 	my assertForeground()
-	set targetX to TD_WIN_X + offsetX
-	set targetY to TD_WIN_Y + offsetY
-	tell application "System Events" to click at {targetX, targetY}
+	set targetX to round (TD_WIN_X + offsetX)
+	set targetY to round (TD_WIN_Y + offsetY)
+	do shell script CLICLICK_PATH & " c:" & targetX & "," & targetY
 end clickAt
 
 on run argv
