@@ -1,0 +1,8 @@
+# Screenshots captured during Time Doctor UI investigation show real company
+# ClickUp/Time Doctor data (ticket names, task lists) - kept local, not pushed.
+scratchpad/**/*.png
+scratchpad/mac.zip
+
+# OS cruft
+.DS_Store
+Thumbs.db

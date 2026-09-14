@@ -1,0 +1,17 @@
+﻿{
+    "Info":  {
+                 "Name":  "Time Doctor | v3.12.16 | Company Time 10:05 PM",
+                 "ControlType":  "ControlType.Window",
+                 "AutomationId":  "",
+                 "ClassName":  "Chrome_WidgetWin_1",
+                 "IsEnabled":  true,
+                 "BoundingBox":  "435,130,1060,880",
+                 "Patterns":  [
+
+                              ],
+                 "Depth":  0
+             },
+    "Children":  [
+
+                 ]
+}

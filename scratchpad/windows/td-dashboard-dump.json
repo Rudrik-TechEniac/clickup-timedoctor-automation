@@ -1,0 +1,33 @@
+﻿{
+    "Info":  {
+                 "Name":  "Time Doctor | v3.12.16 | Company Time 10:04 PM",
+                 "ControlType":  "ControlType.Window",
+                 "AutomationId":  "",
+                 "ClassName":  "Chrome_WidgetWin_1",
+                 "IsEnabled":  true,
+                 "BoundingBox":  "435,130,1060,880",
+                 "Patterns":  [
+
+                              ],
+                 "Depth":  0
+             },
+    "Children":  [
+                     {
+                         "Info":  {
+                                      "Name":  "Chrome Legacy Window",
+                                      "ControlType":  "ControlType.Pane",
+                                      "AutomationId":  "247355112",
+                                      "ClassName":  "Chrome_RenderWidgetHostHWND",
+                                      "IsEnabled":  true,
+                                      "BoundingBox":  "444,193,1043,809",
+                                      "Patterns":  [
+
+                                                   ],
+                                      "Depth":  1
+                                  },
+                         "Children":  [
+
+                                      ]
+                     }
+                 ]
+}

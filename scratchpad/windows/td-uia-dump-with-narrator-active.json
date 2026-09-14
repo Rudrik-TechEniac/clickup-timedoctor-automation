@@ -1,0 +1,22 @@
+﻿{
+    "ProcessId":  20748,
+    "WindowTitle":  "Time Doctor | v3.12.16 | Company Time 9:35 PM",
+    "Tree":  {
+                 "Info":  {
+                              "Name":  "Time Doctor | v3.12.16 | Company Time 9:35 PM",
+                              "ControlType":  "ControlType.Window",
+                              "AutomationId":  "",
+                              "ClassName":  "Chrome_WidgetWin_1",
+                              "IsEnabled":  true,
+                              "IsOffscreen":  false,
+                              "BoundingBox":  "Empty",
+                              "Patterns":  [
+
+                                           ],
+                              "Depth":  0
+                          },
+                 "Children":  [
+
+                              ]
+             }
+}

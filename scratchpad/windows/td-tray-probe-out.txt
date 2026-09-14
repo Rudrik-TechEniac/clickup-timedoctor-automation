@@ -1,0 +1,11 @@
+﻿=== Searching visible tray toolbar (TrayNotifyWnd) ===
+ [ControlType.Pane] ''
+
+=== Searching hidden/overflow tray icons (NotifyIconOverflowWindow) ===
+Attempting to open the overflow flyout (^ chevron) is not automated here;
+run this manually first if Time Doctor's icon is in the hidden overflow area,
+then re-run this script so NotifyIconOverflowWindow is populated.
+NotifyIconOverflowWindow not currently present (chevron not opened).
+
+=== Looking for a button/element whose name mentions 'Time Doctor' anywhere in the tray tree ===
+Matches found: 0

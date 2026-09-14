@@ -1,0 +1,9 @@
+﻿=== Looking for 'Show hidden icons' chevron button ===
+Chevron 'Show hidden icons' not found by exact name; searching for any Button whose name contains 'hidden'...
+Match: Show Hidden Icons
+
+=== Re-checking NotifyIconOverflowWindow after chevron click ===
+Still not present.
+
+=== Broad search: any element anywhere with Name containing 'Time Doctor' ===
+Matches: 0
