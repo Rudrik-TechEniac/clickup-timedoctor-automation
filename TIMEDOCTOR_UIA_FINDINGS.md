@@ -6,7 +6,8 @@
 |---|---|---|
 | Windows — named-element UIA control | **Not viable** | High — tested directly, multiple ways, conclusive negative |
 | Windows — coordinate-based automation | **Viable, working** | Confirmed end-to-end: add task + start, and stop, both tested live against the real app |
-| Mac | **Undetermined** — full scripts written (same proven architecture as Windows: formula-based sidebar selection, foreground re-checked before every action, no-click calibration tool), but still completely unrun - this session has no macOS access | N/A — needs someone with a real Mac to calibrate and test the scripts at `automation/scripts/mac/` |
+| Mac — `System Events` coordinate clicks | **Not viable** | High — tested directly and conclusive: window move/resize via System Events works, but `click at`/`keystroke` fail hard with "osascript is not allowed assistive access" (kTCCServicePostEvent, a stricter non-promptable TCC gate). Reproduced identically on a remote-controlled session AND a genuinely local Terminal; NOT fixed by granting or resetting Accessibility/Automation permissions for Terminal or the calling app. |
+| Mac — `cliclick` (Homebrew, CGEvent-based) coordinate clicks | **Viable, working** | Confirmed end-to-end 2026-09-14 against the real live account: add task + start (with sidebar project selection), and stop, both tested live and visually verified via screenshot. Two real script bugs also found and fixed by this testing (see Mac section below). |
 
 **Bottom line:** Time Doctor's own controls are not reachable via UI Automation (see "Windows — UIA Detailed Results" below), but **coordinate-based mouse click + clipboard paste automation works and was verified live** against the real running app: it correctly (1) types `"<ClickUp title>: <ClickUp link>"` into the "Add Task" field and clicks the row's Play button to create+start a task, which also auto-stops whatever was previously running, and (2) clicks the banner's Stop button to stop the active task. This directly matches the actual product's workflow, shown by the user (screenshot): Time Doctor here isn't a single always-on timer with a task dropdown — it's a **list of tasks, each individually startable**, and starting one auto-stops any other running one. This is a better fit for "switch ticket" than originally assumed (no separate stop-then-start needed — starting the new task's row does both).
 
@@ -50,18 +51,60 @@
 
 ## Mac — Status
 
-**Full scripts now exist at `automation/scripts/mac/` (not `scratchpad/` — these are the
-real implementation, built after Windows was fully proven out), but they are
-STILL COMPLETELY UNVERIFIED.** This entire port was written in a Windows-only session
-with no Mac access whatsoever — not even basic AppleScript syntax checking was
-possible (no interpreter on Windows). Everything below is "written correctly against
-documentation," not "tested and known to work." That distinction matters a lot here:
-on Windows, the working design only emerged after real, repeated live testing caught
-multiple non-obvious bugs (the `$PSScriptRoot`/Mandatory-parameter interaction, the
-focus-stealing/foreground-drift bug, the wrong-project-selection bug, the
-scroll-position-not-being-fixed bug — see the Windows sections above). None of that
-iteration has happened for Mac. Treat every number and assumption below as a
-best-effort starting point, not a verified fact.
+**UPDATE 2026-09-14: calibrated and verified live, end-to-end, against the real
+account.** Everything below this note originally described the pre-verification
+state (written blind, no Mac access) - kept for history, but superseded by this
+summary of what real testing on a real Mac (v3.12.16) actually found:
+
+- **Window management works via plain AppleScript/System Events** exactly as
+  originally written: `set position`/`set size` of `window 1`, and foreground
+  activation/checks (`assertForeground`, `forceGeometry`) all succeeded with no
+  changes needed.
+- **Simulated clicks and keystrokes via System Events do NOT work and cannot be
+  made to** - `tell application "System Events" to click at {x,y}` and `keystroke
+  ... using command down` both fail with "osascript is not allowed assistive
+  access" (-25211). The real TCC log (`log show --predicate 'process=="tccd"'`)
+  showed the actual denied service is `kTCCServicePostEvent`, logged explicitly as
+  "does not allow prompting; returning denied" - a stricter, non-interactive gate,
+  distinct from the plain `kTCCServiceAccessibility` checks that DID succeed for
+  window move/resize. This reproduced identically across a remote-controlled
+  session AND a genuinely local Terminal window, and granting or `tccutil reset`-ing
+  Accessibility/Automation(AppleEvents) permissions for Terminal, `osascript`, and
+  Visual Studio Code all had no effect. Root cause is believed to be that this
+  particular TCC service simply isn't grantable via the normal per-app Accessibility
+  prompt/toggle on this macOS version, not a misconfiguration.
+- **Fix: `cliclick`** (Homebrew: `brew install cliclick`), a small CLI that posts
+  clicks/keystrokes via the same lower-level `CGEventPost` mechanism `td-scroll.js`
+  already used (which never hit this wall) rather than going through System Events'
+  higher-level UI-scripting path. Both action scripts now shell out to it
+  (`CLICLICK_PATH`, `c:x,y` for clicks, `t:text` for typing) instead of using
+  `click at`/`keystroke`. Confirmed working live with no TCC error.
+- **Two more real bugs found and fixed by this testing**, unrelated to the above:
+  a local variable named `key` collides with a reserved System Events term and
+  fails with "Can't set key to ..." (-10006) (renamed to `projKey`); and
+  `(container of (path to me)) as text` fails with "Can't make ... into type text"
+  (-1700) on this macOS version (rewritten via `POSIX path of` + shell `dirname`).
+  cliclick also requires integer coordinates - the sidebar row-height formula
+  produces fractions (e.g. `715.32`), fixed by rounding in `clickAt`.
+- **Sidebar project list**: what first looked like a scrollbar thumb (implying a
+  much longer, unscanned list) turned out to be the selection-accent bar next to
+  the highlighted row, confirmed by sending real scroll events and diffing
+  before/after screenshots (zero movement). This account's full list is exactly the
+  10 visible rows; `TD_SIDEBAR_PROJECT_ORDER`/`TD_SIDEBAR_LAST_ROW_Y`/
+  `TD_SIDEBAR_ROW_HEIGHT` are measured and confirmed (formula-computed row position
+  for `meydan_directory` matched an independent direct measurement exactly).
+- **Verified live, end-to-end**: add+start correctly created a new task under the
+  right project (sidebar selection included) and started its timer from 0, stopping
+  the previously-running task and preserving its accumulated time; stop correctly
+  halted the running timer, leaving it resumable. Both `CALIBRATED` properties are
+  now `true`.
+- **Real data created during this verification**: a test task named "CALIBRATION
+  TEST - safe to delete" (with a fake `https://example.com/calibration-test` link)
+  was created in the real, live company Time Doctor account under `meydan_directory`
+  and has a few seconds of tracked time. Flagged for cleanup, same as the Windows
+  verification's equivalent note above.
+
+Original pre-verification notes (kept for history):
 
 **Design carried over from the proven Windows implementation** (same architecture,
 translated to AppleScript/JXA):
