@@ -14,12 +14,19 @@ registration, workspace config) is identical cross-platform.
 
 ## 0. Get the code onto their machine
 
-This project isn't a git repo yet. Until it is, the simplest options:
-- **Recommended**: turn it into a private git repo (GitHub/GitLab) and have them
-  `git clone` it. Ask Claude to do this if you want it set up.
-- **Otherwise**: zip the `automation/` folder (it's small — `node_modules`, `dist`,
-  `.env`, and `data/` are all git-ignored/excludable) and send it over, or share it
-  via OneDrive/a network drive.
+Private repo, already set up: https://github.com/Rudrik-TechEniac/clickup-timedoctor-automation
+
+They need to be added as a collaborator first (it's private) - ask Rudrik, or
+whoever has admin on it, to add their GitHub account under Settings → Collaborators
+on that repo. Then:
+
+```bash
+git clone https://github.com/Rudrik-TechEniac/clickup-timedoctor-automation.git
+cd clickup-timedoctor-automation
+```
+
+`node_modules/`, `dist/`, `.env`, and `data/` are all git-ignored - each person's
+`npm install`/`.env`/`npm run build` (steps below) regenerates or creates their own.
 
 ## Why does this need to track state at all?
 
